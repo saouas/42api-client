@@ -1,0 +1,17 @@
+{
+  "name": "42api-client",
+  "version": "1.0.0",
+  "description": "42client api wrapper",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "signal",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.24.0",
+    "bunyan": "^1.8.15",
+    "bunyan-pretty-colors": "^0.1.7",
+    "dotenv": "^10.0.0"
+  }
+}
