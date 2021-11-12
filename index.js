@@ -17,7 +17,10 @@ const logger = bunyan.createLogger({
     streams,
     tags: ['42api-client', 'api wrapper'],
   });
-
+  
+const sleep = (ms) => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 class IntraClient {
     constructor(){
         this.client_id = process.env.CLIENT_ID || null;
@@ -28,7 +31,7 @@ class IntraClient {
 
         Object.keys(this).forEach(props => {
             if(this[props] == null && props != 'token'){
-                logger.error(`${props} attribute is not defined correctly`);
+                logger.error(`${props} attribute is not defined correctly. Check your .env file`);
                 return 0;
             }      
         });
@@ -56,12 +59,18 @@ class IntraClient {
         
     }
 
-    buildUrl(url, payload){
+    buildUrl(url, payload, pagination){
         //Build the complete URL
         if(!url)
         {
-            logger.error(`url is empty`);
+            logger.error(`[buildUrl] url is empty`);
             return false;
+        }
+        if(pagination){
+            Object.keys(payload).map((arg, key)=>{
+                url += `&${arg}=${payload[arg]}`;
+            });
+            return url;
         }
         let URI = `${process.env.ENDPOINT_API}/${url}`;
         Object.keys(payload).map((arg, key)=>{
@@ -70,10 +79,50 @@ class IntraClient {
             else
                 URI += `&${arg}=${payload[arg]}`
         })
+        console.log(URI)
         return URI;
     }
 
-    async request(method, url, headers, payload){
+    calculNbPages(response){
+        let headers = response?.headers;
+        if(headers){
+            if(!headers.hasOwnProperty('x-total')){
+                return 0;
+
+            }
+            if(headers.hasOwnProperty('x-per-page')){
+                return Math.ceil(parseInt(headers['x-total'])/parseInt(headers['x-per-page']));
+            }
+        }
+        else
+            logger.error(`[CalculNbPages] headers are not set properly`);
+    }
+
+    async treatPages (first_call, page_numbers, url, headers, payload){
+        try{
+            let requests = [];
+            for(let page = 1; page <= page_numbers; page++){
+                let tmp_url = this.buildUrl(url, {
+                    'page[number]': page
+                }, true);
+                requests.push(this.request('get', tmp_url, headers, payload, true));
+                await sleep(process.env.SLEEP_TIME);
+            }
+            return Promise.all(requests).then((result)=>{
+                let fresh_data = [];
+                result.map((req)=>{
+                    fresh_data.push(req?.data);
+                })
+                return fresh_data;
+            })
+        }
+        catch(err){
+            logger.error(err);
+        }
+    }
+
+    async request(method, url, headers, payload, processing){
+        let page_numbers = 1;
         //Check that token is an actual property of Object
         if(this.token == null && method != 'auth'){
             this.token = await this.request_token();
@@ -81,12 +130,32 @@ class IntraClient {
         //Push token to headers
         headers['Authorization'] = `Bearer ${this.token}`;
 
-        return await axios({
-            method: (method == 'auth') ? 'post': method,
-            url,
-            headers,
-            data: payload
-        })
+        if(method == 'get'){
+            let first_call = await axios({
+                method,
+                url,
+                headers,
+                data: payload
+            })
+            if(!payload.hasOwnProperty('page[number]'))
+                page_numbers = this.calculNbPages(first_call);
+            if(page_numbers < 2 || processing)
+                return first_call;
+            else{
+                let res = await this.treatPages(first_call, page_numbers,url, headers, payload);
+                return {
+                    status: 200,
+                    data: res
+                };
+            }
+        }
+        else
+            return await axios({
+                method: (method == 'auth') ? 'post': method,
+                url,
+                headers,
+                data: payload
+            })
     }
 
     async get(url, headers, payload){
@@ -102,7 +171,7 @@ class IntraClient {
         catch(err)
         {
             logger.error(err);
-            console.log(err);
+            //console.log(err);
         }
     }
 
@@ -133,10 +202,10 @@ const main = async () => {
     let payload = {
         'filter[primary_campus]':46,
         'filter[cursus]': 9,
+        'page[number]': 4
     };
     let res = await ic.get('teams', {}, payload);
     console.log(res);
-
 }
 
 main();
