@@ -10,8 +10,6 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.24.0",
-    "bunyan": "^1.8.15",
-    "bunyan-pretty-colors": "^0.1.7",
     "dotenv": "^10.0.0"
   }
 }

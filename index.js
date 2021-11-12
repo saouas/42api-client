@@ -1,22 +1,5 @@
 require('dotenv').config()
 const { default: axios } = require('axios');
-const bunyan = require('bunyan');
-const PrettyStream = require('bunyan-pretty-colors');
-
-const prettyStdOut = new PrettyStream();
-prettyStdOut.pipe(process.stdout);
-
-const streams = [{
-    level: 'debug',
-    type: 'raw',
-    stream: prettyStdOut,
-  }];
-
-const logger = bunyan.createLogger({
-    name: '42api-client',
-    streams,
-    tags: ['42api-client', 'api wrapper'],
-  });
   
 const sleep = (ms) => {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -31,8 +14,7 @@ class IntraClient {
 
         Object.keys(this).forEach(props => {
             if(this[props] == null && props != 'token'){
-                logger.error(`${props} attribute is not defined correctly. Check your .env file`);
-                return 0;
+               return new Error(`${props} attribute is not defined correctly. Check your .env file`);
             }      
         });
     }
@@ -53,8 +35,7 @@ class IntraClient {
                 return false;
         }
         catch(err){
-            logger.error('token generation failed');
-            console.log(err);
+            return err;
         }
         
     }
@@ -79,8 +60,11 @@ class IntraClient {
             else
                 URI += `&${arg}=${payload[arg]}`
         })
-        console.log(URI)
         return URI;
+    }
+
+    buildSimpleUrl(url){
+        return `${process.env.ENDPOINT_API}/${url}`;
     }
 
     calculNbPages(response){
@@ -95,7 +79,7 @@ class IntraClient {
             }
         }
         else
-            logger.error(`[CalculNbPages] headers are not set properly`);
+            return new Error(`[CalculNbPages] headers are not set properly`);
     }
 
     async treatPages (first_call, page_numbers, url, headers, payload){
@@ -117,7 +101,7 @@ class IntraClient {
             })
         }
         catch(err){
-            logger.error(err);
+            return err;
         }
     }
 
@@ -163,35 +147,108 @@ class IntraClient {
             let URI = this.buildUrl(url, payload);
             let response = await this.request('get', URI, headers, payload);
             if(response?.status == 200){
-                return response.data;
+                return {
+                    status: 'success',
+                    data: response?.data
+                }
             }
             else
-                return false;
+                return {
+                    status: 'error',
+                    reason: 'unable to get'
+                }
         }
         catch(err)
         {
-            logger.error(err);
-            //console.log(err);
+            return err;
         }
     }
 
     async post(url, headers, payload){
-        return await this.request('post', url, headers, payload);
-
+        try{
+            let URI = this.buildSimpleUrl(url, payload);
+            let response = await this.request('post', URI, headers, payload);
+            if(response?.status == 201)
+                return {
+                    status: 'success',
+                    data: response?.data
+                }
+            else
+                return {
+                    status: 'error',
+                    reason: 'unable to delete'
+                }
+        }
+        catch(err)
+        {
+            return err;
+        }
     }
 
     async patch(url, headers, payload){
-        return await this.request('patch', url, headers, payload);
-
+        try{
+            let URI = this.buildSimpleUrl(url, payload);            
+            let response = await this.request('patch', URI, headers, payload);
+            console.log(response);
+            if(response?.status == 204)
+                return {
+                    status: 'success',
+                    data: response?.data
+                };
+            else
+                return {
+                    status: 'error',
+                    reason: 'unable to patch'
+                }
+        }
+        catch(err)
+        {
+            return err;
+        }
     }
 
     async put(url, headers, payload){
-        return await this.request('put', url, headers, payload);
-
+        try{
+            let URI = this.buildSimpleUrl(url, payload);            
+            let response = await this.request('put', URI, headers, payload);
+            if(response?.status == 204){
+                return {
+                    status: 'success',
+                    data: response?.data
+                }; 
+            }
+                
+            else
+                return {
+                    status: 'error',
+                    reason: 'unable to put'
+                } 
+        }
+        catch(err)
+        {
+            return err;
+        }
     }
 
     async delete(url, headers, payload){
-        return await this.request('delete', url, headers, payload);
+        try{
+            let URI = this.buildSimpleUrl(url, payload);            
+            let response = await this.request('delete', URI, headers, payload);
+            if(response?.status == 204)
+                return {
+                    status: 'success',
+                    data: response?.data
+                };
+            else
+                return {
+                    status: 'error',
+                    reason: 'unable to delete'
+                }
+        }
+        catch(err)
+        {
+            return err;
+        }
     }
 }
 
@@ -199,13 +256,19 @@ const main = async () => {
     let ic = new IntraClient();
     
     //let res = await ic.request_token();
+    // let payload = {
+    //     'filter[primary_campus]':46,
+    //     'filter[cursus]': 9,
+    //     'page[number]': 4
+    // };
+
     let payload = {
-        'filter[primary_campus]':46,
-        'filter[cursus]': 9,
-        'page[number]': 4
-    };
-    let res = await ic.get('teams', {}, payload);
-    console.log(res);
+        "filter[campus_id]": 40,
+        "sort": 'begin_at'
+      };
+    let res = await ic.get('exams', {}, payload);
+    console.log(res.data);
+
 }
 
 main();
