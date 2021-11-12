@@ -223,7 +223,7 @@ class IntraClient {
     try {
       const URI = this.buildSimpleUrl(url, payload);
       const response = await this.request('delete', URI, headers, payload);
-      if (response?.status ===g 204) {
+      if (response?.status === 204) {
         return {
           status: 'success',
           data: response?.data,
@@ -239,22 +239,4 @@ class IntraClient {
   }
 }
 
-const main = async () => {
-  const ic = new IntraClient();
-
-  // let res = await ic.request_token();
-  // let payload = {
-  //     'filter[primary_campus]':46,
-  //     'filter[cursus]': 9,
-  //     'page[number]': 4
-  // };
-
-  const payload = {
-    'filter[campus_id]': 40,
-    sort: 'begin_at',
-  };
-  const res = await ic.get('exams', {}, payload);
-  console.log(res.data);
-};
-
-main();
+module.exports = IntraClient;

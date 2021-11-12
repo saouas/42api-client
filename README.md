@@ -39,7 +39,8 @@ To install the 42api-client in your project this is very easy, you can do it thr
   SLEEP_TIME=330
 ```
 
-3. Happy use :D
+3. Invoke the module as following: `const IntraClient = require('42api-client');`
+4. TADAM :D
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
