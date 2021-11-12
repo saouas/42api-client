@@ -223,7 +223,7 @@ class IntraClient {
     try {
       const URI = this.buildSimpleUrl(url, payload);
       const response = await this.request('delete', URI, headers, payload);
-      if (response?.status === 204) {
+      if (response?.status ===g 204) {
         return {
           status: 'success',
           data: response?.data,
