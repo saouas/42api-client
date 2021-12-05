@@ -52,11 +52,12 @@ To install the 42api-client in your project this is very easy, you can do it thr
 To give you an idea about how to use the library you can check the `examples` folder or the following example:
 
 ```
-const payload = {
+  const payload = {
     'filter[campus_id]': 40,
     sort: 'begin_at',
   };
-  const res = await ic.get('exams', {}, payload);
+  const headers = {};
+  const res = await ic.get('exams', headers, payload);
   console.log(res.data);
 ```
 
